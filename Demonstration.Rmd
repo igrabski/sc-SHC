@@ -1,0 +1,99 @@
+---
+title: "Significance Analysis Demo"
+author: "Izzy Grabski"
+date: '2022-07-31'
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+We introduce a significance analysis approach to clustering single-cell RNA-sequencing (scRNA-seq) data. Our approach is implemented in two ways. First, we present a stand-alone clustering pipeline, called single-cell significance of hierarchical clustering (sc-SHC), that builds hypothesis testing into a hierarchical clustering framework. Second, we offer a way to apply significance analysis to any set of pre-computed clusters. 
+
+In this demo, we construct a dataset with two ground-truth populations and show how our approach can be applied. 
+
+### Single-Cell Significance of Hierarchical Clustering
+
+First, we load in 293T scRNA-seq data from 10X, subset to 200 cells for the sake of demonstration, and create two distinct populations by permuting the genes of the first 100 cells.
+
+```{r,echo=TRUE,warning=FALSE,message=FALSE}
+library(BiocFileCache)
+library(Seurat)
+
+set.seed(73122)
+
+# Load in 10X data
+bfc <- BiocFileCache(ask=FALSE)
+path <- bfcrpath(bfc,'https://cf.10xgenomics.com/samples/cell-exp/1.1.0/293t/293t_filtered_gene_bc_matrices.tar.gz')
+tmp <- tempfile()
+untar(path,exdir=tmp)
+data <- Read10X(data.dir = file.path(tmp,'filtered_matrices_mex','hg19')) 
+
+# Subset and create two populations
+data <- as.matrix(data[,1:200])
+top50 <- order(rowSums(data),decreasing=T)[1:50]
+bottom50 <- order(rowSums(data),decreasing=F)[1:50]
+data[c(top50,bottom50),1:100] <- data[sample(c(top50,bottom50),replace=F),1:100]
+labels <- c(rep('population1',100),rep('population2',100))
+```
+
+Next, we apply our clustering pipeline to these data. Because this demo dataset is so small, we choose to use only six principal components and 100 features; however, by default, the number of principal components is set to 30 and the number of features to 2500, which is what we generally recommend. We also keep the family-wise error rate (alpha) set to 0.05, which is the default setting. Note that this is a fairly conservative setting, and when the risk of false discoveries is more tolerable (for example, in exploratory analysis, when the goal is to detect possibly rare populations), this parameter can be increased. 
+
+```{r,echo=TRUE,warning=FALSE,message=FALSE}
+source('significance_analysis.R')
+
+# Apply sc-SHC
+clusters <- scSHC(data,num_features=100,num_PCs=6,parallel=F)
+
+table(clusters,labels)
+```
+
+Our approach finds exactly the right number of clusters (2), with perfect concordance to the ground-truth labels.
+
+### Significance Analysis on Pre-Computed Clusters
+
+We now demonstrate our significance analysis approach applied on pre-computed clusters. These clusters can arise from any clustering algorithm, including when manual changes were made to the output. Here, we show results when applying the Louvain algorithm from Seurat.
+
+```{r,echo=TRUE,warning=FALSE,message=FALSE}
+# Cluster with Seurat
+data.seurat <- CreateSeuratObject(data)
+data.seurat <- NormalizeData(data.seurat)
+data.seurat <- FindVariableFeatures(data.seurat,nfeatures=100)
+data.seurat <- ScaleData(data.seurat)
+data.seurat <- RunPCA(data.seurat,npcs=6)
+data.seurat <- RunUMAP(data.seurat,features=VariableFeatures(data.seurat))
+data.seurat <- FindNeighbors(data.seurat,dims=1:6)
+data.seurat <- FindClusters(data.seurat,resolution=1)
+
+table(Idents(data.seurat),labels)
+```
+
+At a resolution parameter of 1, using the same number of genes and PCs as our approach, Seurat found 3 clusters, where two clusters subdivide the second population. We now apply our significance analysis approach on top of these clusters. We use the same parameters as before due to the small size of these demo data, but to re-iterate, we generally recommend sticking to the default parameters. 
+
+```{r,echo=TRUE,warning=FALSE,message=FALSE}
+# Apply significance analysis on Seurat's clusters
+new_seurat <- testClusters(data,as.character(Idents(data.seurat)),num_PCs=6,
+                           num_features=100,parallel=F)
+
+table(new_seurat,Idents(data.seurat))
+```
+
+Our approach merged the two extra clusters back into one, finding again the exact right subdivision of the data.
+
+Finally, we visualize all 3 clustering results.
+
+```{r,echo=TRUE,warning=FALSE,message=FALSE}
+library(ggplot2)
+library(ggpubr)
+dslabs::ds_theme_set()
+
+# Visualize clustering results
+data.seurat$scSHC <- clusters
+data.seurat$Seurat <- Idents(data.seurat)
+data.seurat$Corrected_Seurat <- new_seurat
+
+ggarrange(DimPlot(data.seurat,group.by='scSHC')+NoLegend(),
+          DimPlot(data.seurat,group.by='Seurat')+NoLegend(),
+          DimPlot(data.seurat,group.by='Corrected_Seurat')+NoLegend())
+```
