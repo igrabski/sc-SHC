@@ -6,7 +6,7 @@ Our package can be installed as follows:
 
 ```
 # install.packages("devtools")
-devtools::install_github("igrabski/scSHC")
+devtools::install_github("igrabski/sc-SHC")
 ```
 
 # Usage
