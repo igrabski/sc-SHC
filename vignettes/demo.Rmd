@@ -1,0 +1,158 @@
+---
+title: "scSHC Demo"
+author:
+- name: Isabella N. Grabski
+  affiliation: Department of Biostatistics, Harvard University
+  email: isabellagrabski@g.harvard.edu
+package: scSHC
+output:
+  BiocStyle::html_document
+abstract: |
+  Description of your vignette
+vignette: |
+  %\VignetteIndexEntry{scSHC Demo}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# Introduction
+
+We introduce a significance analysis approach to clustering single-cell RNA-sequencing (scRNA-seq) data. Our approach is implemented in two ways. First, we present a stand-alone clustering pipeline, called single-cell significance of hierarchical clustering (sc-SHC), that builds hypothesis testing into a hierarchical clustering framework. Second, we offer a way to apply significance analysis to any set of pre-computed clusters. 
+
+In this demo, we show how our approach can be applied to a simple dataset with two ground-truth clusters.
+
+# Single-Cell Significance of Hierarchical Clustering
+
+First, we load in our example data `counts`. This is a sparse matrix with 32,738 genes and 1,154 cells; the first 577 cells belong to one group, and the second 577 cells to another.
+
+```{r,echo=TRUE,warning=FALSE,message=FALSE}
+set.seed(121922)
+
+library(scSHC)
+
+data(counts)
+true_labels <- c(rep('Cluster1',577),rep('Cluster2',577))
+```
+
+Next, we apply our clustering pipeline to these data. We keep the family-wise error rate (alpha) set to 0.05, which is the default setting. Note that this is a fairly conservative setting, and when the risk of false discoveries is more tolerable (for example, in exploratory analysis, when the goal is to detect possibly rare populations), this parameter can be increased. With the default number of 2 cores, this takes about 1 minute to run.
+
+```{r,echo=TRUE,warning=FALSE,message=FALSE}
+clusters <- scSHC(counts)
+table(clusters[[1]],true_labels)
+```
+
+Our approach finds exactly the right number of clusters (2), with perfect concordance to the ground-truth labels. We can also view the dendrogram of clusters that were tested and print out their adjusted p-values.
+
+```{r,echo=TRUE,warning=FALSE,message=FALSE}
+clusters[[2]]
+```
+
+This shows that the adjusted p-value for splitting the root node was 0, but the adjusted p-values for splitting both of the resulting clusters was 1, which is why the clustering stopped there.
+
+# Significance Analysis on Pre-Computed Clusters
+
+We now demonstrate our significance analysis approach applied on pre-computed clusters. These clusters can arise from any clustering algorithm, including when manual changes were made to the output. Here, we show results when applying the Louvain algorithm from Seurat.
+
+```{r,echo=TRUE,warning=FALSE,message=FALSE}
+library(Seurat)
+
+data.seurat <- CreateSeuratObject(counts)
+data.seurat <- NormalizeData(data.seurat)
+data.seurat <- FindVariableFeatures(data.seurat)
+data.seurat <- ScaleData(data.seurat)
+data.seurat <- RunPCA(data.seurat)
+data.seurat <- RunUMAP(data.seurat,features=VariableFeatures(data.seurat))
+data.seurat <- FindNeighbors(data.seurat)
+data.seurat <- FindClusters(data.seurat,resolution=0.8)
+
+table(Idents(data.seurat),true_labels)
+```
+
+At a resolution parameter of 0.8, Seurat found 7 clusters, where 3 clusters subdivide the first population and 4 clusters subdivide the second population. We now apply our significance analysis approach on top of these clusters, again using the default FWER of 0.05. This also takes about 1 minute with two cores.
+
+```{r,echo=TRUE,warning=FALSE,message=FALSE}
+new_seurat <- testClusters(counts,cluster_ids=as.character(Idents(data.seurat)))
+table(new_seurat[[1]],Idents(data.seurat))
+```
+
+Our approach merged the these clusters back into two populations. We can again view the adjusted p-values for each split:
+
+```{r,echo=TRUE,warning=FALSE,message=FALSE}
+new_seurat[[2]]
+```
+
+Once again, the split at the root node had an adjusted p-value of 0, and the splits of both new clusters (which consist of combinations of the input clusters) had adjusted p-values of 1.
+
+Finally, we visualize all 3 clustering results.
+
+```{r,echo=TRUE,warning=FALSE,message=FALSE}
+library(ggplot2)
+library(ggpubr)
+
+data.seurat$scSHC <- clusters[[1]]
+data.seurat$Seurat <- Idents(data.seurat)
+data.seurat$Corrected_Seurat <- new_seurat[[1]]
+
+ggarrange(DimPlot(data.seurat,group.by='scSHC')+NoLegend(),
+          DimPlot(data.seurat,group.by='Seurat')+NoLegend(),
+          DimPlot(data.seurat,group.by='Corrected_Seurat')+NoLegend(),
+          nrow=1)
+```
+
+# Batch Effects
+
+In many settings, we may have batch effects due to multiple samples or other factors. These can be input into `scSHC()` or `testClusters()` as a character vector in the same order as the cells in the data. As an example, let's randomly generate batch labels, and then permute the top 30 genes for the cells in Batch 1.
+
+```{r,echo=TRUE,warning=FALSE,message=FALSE}
+batch <- sample(c('batch1','batch2'),ncol(counts),replace=T)
+counts2 <- counts
+top30 <- rownames(counts2)[order(rowSums(counts2),decreasing=T)[1:30]]
+counts2[top30,batch=='batch1'] <- counts2[sample(top30,30),batch=='batch1']
+
+clusters_batch <- scSHC(counts2,batch)
+table(clusters_batch[[1]],true_labels)
+```
+
+When we run our clustering pipeline, we still find two clusters with perfect concordance to ground truth. We can now cluster with Seurat:
+
+```{r,echo=TRUE,warning=FALSE,message=FALSE}
+data.seurat2 <- CreateSeuratObject(counts2)
+data.seurat2 <- NormalizeData(data.seurat2)
+data.seurat2 <- FindVariableFeatures(data.seurat2)
+data.seurat2 <- ScaleData(data.seurat2)
+data.seurat2 <- RunPCA(data.seurat2)
+data.seurat2 <- RunUMAP(data.seurat2,features=VariableFeatures(data.seurat2))
+data.seurat2 <- FindNeighbors(data.seurat2)
+data.seurat2 <- FindClusters(data.seurat2,resolution=0.8)
+
+table(Idents(data.seurat2),true_labels)
+table(Idents(data.seurat2),batch)
+```
+
+This results in 7 clusters, in which the first population is subdivided into 4 clusters and the second is subdivided into 3. Unsurprisingly, because no batch correction was done, these clusters are biased by batch, particularly the first four. If we now apply significance analysis to these clusters:
+
+```{r,echo=TRUE,warning=FALSE,message=FALSE}
+new_seurat_batch <- testClusters(counts2,
+                                 cluster_ids=as.character(Idents(data.seurat2)),
+                                 batch=batch)
+table(new_seurat_batch[[1]],Idents(data.seurat2))
+```
+
+We find that the clusters are correctly merged together, despite the batch effect. Finally, we can again plot these results:
+
+```{r,echo=TRUE,warning=FALSE,message=FALSE}
+data.seurat2$scSHC <- clusters_batch[[1]]
+data.seurat2$Seurat <- Idents(data.seurat2)
+data.seurat2$Corrected_Seurat <- new_seurat_batch[[1]]
+
+ggarrange(DimPlot(data.seurat2,group.by='scSHC')+NoLegend(),
+          DimPlot(data.seurat2,group.by='Seurat')+NoLegend(),
+          DimPlot(data.seurat2,group.by='Corrected_Seurat')+NoLegend(),
+          nrow=1)
+```
+
+# Session info {.unnumbered}
+
+```{r sessionInfo, echo=FALSE}
+sessionInfo()
+```
