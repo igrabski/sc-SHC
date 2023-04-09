@@ -348,11 +348,11 @@ testClusters <- function(data,cluster_ids,batch=NULL,var.genes=NULL,
       # Compute q-FWER
       if (is.null(node0)) {
         node0 <- Node$new(paste0('Node 0: ',
-          min(round(test*(ncol(data)-1)/(length(leaves)-1),2),1)))
+          min(round(test*(ncol(data)-1)/(sum(cluster_ids%in%leaves)-1),2),1)))
       } else {
         do.call("<-",list(paste0('node',counter),
          eval(parse(text=parents[[1]]))$AddChild(paste0('Node ',counter,': ',
-         min(round(test*(ncol(data)-1)/(length(leaves)-1),2),1)))))
+         min(round(test*(ncol(data)-1)/(sum(cluster_ids%in%leaves)-1),2),1)))))
       }
 
       # If there are no further splits down a branch, make it a cluster
@@ -384,11 +384,11 @@ testClusters <- function(data,cluster_ids,batch=NULL,var.genes=NULL,
       # Compute q-FWER
       if (is.null(node0)) {
         node0 <- Node$new(paste0('Cluster 0: ',
-          min(round(test*(ncol(data)-1)/(length(leaves)-1),2),1)))
+          min(round(test*(ncol(data)-1)/(sum(cluster_ids%in%leaves)-1),2),1)))
       } else {
         do.call("<-",list(paste0('Cluster',length(clusters)),
          eval(parse(text=parents[[1]]))$AddChild(paste0('Cluster ',length(clusters),': ',
-         min(round(test*(ncol(data)-1)/(length(leaves)-1),2),1)))))
+         min(round(test*(ncol(data)-1)/(sum(cluster_ids%in%leaves)-1),2),1)))))
       }
     }
     dends_to_test[[1]] <- NULL
