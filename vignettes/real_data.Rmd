@@ -1,0 +1,139 @@
+---
+title: "scSHC Demo on Real Data"
+author:
+- name: Isabella N. Grabski
+  affiliation: Department of Biostatistics, Harvard University
+  email: isabellagrabski@g.harvard.edu
+package: scSHC
+output:
+  BiocStyle::html_document
+abstract: |
+  Description of your vignette
+vignette: |
+  %\VignetteIndexEntry{scSHC Demo on Real Data}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# Introduction
+
+We introduce a significance analysis approach to clustering single-cell RNA-sequencing (scRNA-seq) data. Our approach is implemented in two ways. First, we present a stand-alone clustering pipeline, called single-cell significance of hierarchical clustering (sc-SHC), that builds hypothesis testing into a hierarchical clustering framework. Second, we offer a way to apply significance analysis to any set of pre-computed clusters. 
+
+In this demo, we show how our approach can be applied to some real datasets.
+
+# Single-Cell Significance of Hierarchical Clustering
+
+First, we load in the `ZhaoImmuneLiver` data from the package `scRNAseq`. We extract the raw UMI counts from these data, and for simplicity, we restrict our attention to the liver cells from Donor 2, which has the largest number of liver cells. 
+
+```{r,echo=TRUE,warning=FALSE,message=FALSE}
+set.seed(41423)
+
+library(scSHC)
+library(scRNAseq)
+
+liver <- ZhaoImmuneLiverData()
+liver <- liver[,liver$sample=='donor 2 liver']
+liver.cnts <- counts(liver)
+```
+
+Next, we apply our clustering pipeline to these data. We keep the family-wise error rate (alpha) set to 0.05, which is the default setting. Note that this is a fairly conservative setting, and when the risk of false discoveries is more tolerable (for example, in exploratory analysis, when the goal is to detect possibly rare populations), this parameter can be increased. With the default number of 2 cores, this takes about 5.5 minutes to run on this 12,000-cell dataset. 
+
+```{r,echo=TRUE,warning=FALSE,message=FALSE}
+clusters <- scSHC(liver.cnts)
+table(clusters[[1]],liver$broad)
+```
+
+Our approach finds six clusters. When compared to the broad cell type labels, we see one corresponds to B cells; one corresponds to NKT cells; two correspond to ASC cells; and the last two correspond to monocytes. We can also view the dendrogram of clusters that were tested and print out their adjusted p-values.
+
+```{r,echo=TRUE,warning=FALSE,message=FALSE}
+clusters[[2]]
+```
+
+# Significance Analysis on Pre-Computed Clusters
+
+We now demonstrate our significance analysis approach applied on pre-computed clusters. These clusters can arise from any clustering algorithm, including when manual changes were made to the output. Here, we show results when applying our approach to the 25 clusters that had been originally found in these data, again using the default FWER of 0.05. This takes about 7.5 minutes with two cores.
+
+```{r,echo=TRUE,warning=FALSE,message=FALSE}
+new <- testClusters(liver.cnts,cluster_ids=liver$Cluster)
+table(new[[1]],liver$Cluster)
+table(new[[1]],liver$broad)
+```
+
+Our approach merged the 25 clusters into five, which are similar but not exactly the same as the six clusters we had found in our de novo approach. This is to be expected, since the clustering is now based on assessing the provided labels, which can differ in how they partition cells from our de novo clustering pipeline. Here, we see that we have one cluster corresponding to B cells; one cluster corresponding to ASC cells; one cluster corresponding to monocytes; and two clusters corresponding to NKT cells. We can again view the adjusted p-values for each split:
+
+```{r,echo=TRUE,warning=FALSE,message=FALSE}
+new[[2]]
+```
+
+Finally, we visualize all 3 clustering results.
+
+```{r,echo=FALSE,warning=FALSE,message=FALSE}
+library(ggplot2)
+library(Seurat)
+library(ggpubr)
+
+data.seurat <- CreateSeuratObject(counts=liver.cnts)
+data.seurat <- NormalizeData(data.seurat)
+data.seurat <- FindVariableFeatures(data.seurat)
+data.seurat <- ScaleData(data.seurat)
+data.seurat <- RunPCA(data.seurat)
+data.seurat <- RunUMAP(data.seurat,dims=1:30)
+data.seurat$scSHC <- clusters[[1]]
+data.seurat$Original <- liver$Cluster
+data.seurat$Corrected_Original <- new[[1]]
+
+ggarrange(DimPlot(data.seurat,group.by='scSHC')+NoLegend(),
+          DimPlot(data.seurat,group.by='Original')+NoLegend(),
+          DimPlot(data.seurat,group.by='Corrected_Original')+NoLegend(),
+          nrow=1)
+```
+
+# Batch Effects
+
+In many settings, we may have batch effects due to multiple samples or other factors. These can be input into `scSHC()` or `testClusters()` as a character vector in the same order as the cells in the data. As an example, let's now consider the `KotliarovPBMCData` from the `scRNAseq` package, which has samples coming from two batches.
+
+```{r,echo=TRUE,warning=FALSE,message=FALSE}
+set.seed(41423)
+
+kot <- KotliarovPBMCData()
+kot.cnts <- counts(kot)
+
+clusters <- scSHC(kot.cnts,batch=kot$batch)
+table(clusters[[1]],kot$batch)
+```
+
+On this 58,000-cell dataset, our clustering pipeline takes 24 minutes to run. We see a total of 8 clusters, with good mixing across the two batches. We can again view the adjusted p-values:
+
+```{r,echo=TRUE,warning=FALSE,message=FALSE}
+clusters[[2]]
+```
+
+Next, we can try clustering these data using the Louvain algorithm as implemented by `Seurat`, and then apply our significance analysis approach to those resulting 16 clusters.
+
+```{r,echo=TRUE,warning=FALSE,message=FALSE}
+data.seurat <- CreateSeuratObject(counts=kot.cnts)
+data.seurat <- NormalizeData(data.seurat)
+data.seurat <- FindVariableFeatures(data.seurat)
+data.seurat <- ScaleData(data.seurat)
+data.seurat <- RunPCA(data.seurat)
+data.seurat <- RunUMAP(data.seurat,dims=1:30)
+data.seurat <- FindNeighbors(data.seurat)
+data.seurat <- FindClusters(data.seurat)
+
+new <- testClusters(kot.cnts,batch=kot$batch,cluster_ids=Idents(data.seurat))
+table(new[[1]],Idents(data.seurat))
+new[[2]]
+```
+
+This takes approximately 23 minutes to run. Our pipeline ultimately merged these 16 clusters into 7. Below, we visualize and compare these different clustering results.
+
+```{r,echo=FALSE,warning=TRUE,message=FALSE}
+data.seurat$scSHC <- clusters[[1]]
+data.seurat$Louvain <- Idents(data.seurat)
+data.seurat$Corrected_Louvain <- new[[1]]
+
+ggarrange(DimPlot(data.seurat,group.by='scSHC')+NoLegend(),
+          DimPlot(data.seurat,group.by='Louvain')+NoLegend(),
+          DimPlot(data.seurat,group.by='Corrected_Louvain')+NoLegend(),
+          nrow=1)
+```
