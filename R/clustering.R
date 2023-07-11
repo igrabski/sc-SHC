@@ -20,7 +20,7 @@ fit_model_batch <- function(y,on_genes,num_PCs) {
   diag(rhos) <- sigmas
 
   # Make the covariance matrix positive-definite
-  on_cov_eigs <- RSpectra::eigs_sym(as.matrix(rhos),k=num_PCs)
+  on_cov_eigs <- RSpectra::eigs_sym(as.matrix(rhos),k=min(c(nrow(rhos)-1,num_PCs)))
   num_pos <- sum(on_cov_eigs$values>0)
   on_cov.sub <- on_cov_eigs$vectors[,1:num_pos]%*%
     sqrt(diag(on_cov_eigs$values[1:num_pos]))
