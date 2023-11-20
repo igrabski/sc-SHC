@@ -4,6 +4,9 @@
 \name{counts}
 \alias{counts}
 \title{A sample count matrix}
+\value{
+A sparse matrix containing an exemplary count matrix
+}
 \description{
 A sample count matrix
 }
