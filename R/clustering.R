@@ -508,6 +508,8 @@ testClusters <- function(data,cluster_ids,batch=NULL,var.genes=NULL,
 
 #' A sample count matrix
 #'
+#' @return A sparse matrix containing an exemplary count matrix
+#'
 #' @name counts
 #' @docType data
 NULL
