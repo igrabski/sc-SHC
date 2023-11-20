@@ -112,9 +112,9 @@ ggarrange(DimPlot(data.seurat,group.by='scSHC')+NoLegend(),
 In many settings, we may have batch effects due to multiple samples or other factors. These can be input into `scSHC()` or `testClusters()` as a character vector in the same order as the cells in the data. As an example, let's randomly generate batch labels, and then permute the top 30 genes for the cells in Batch 1.
 
 ```{r,echo=TRUE,warning=FALSE,message=FALSE}
-batch <- sample(c('batch1','batch2'),ncol(counts),replace=T)
+batch <- sample(c('batch1','batch2'),ncol(counts),replace=TRUE)
 counts2 <- counts
-top30 <- rownames(counts2)[order(rowSums(counts2),decreasing=T)[1:30]]
+top30 <- rownames(counts2)[order(rowSums(counts2),decreasing=TRUE)[1:30]]
 counts2[top30,batch=='batch1'] <- counts2[sample(top30,30),batch=='batch1']
 
 clusters_batch <- scSHC(counts2,batch, cores = nr_cores)
