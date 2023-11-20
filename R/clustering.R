@@ -140,6 +140,7 @@ generate_null_statistic <- function(y,params,on_genes,x,num_PCs,
 #' @importFrom stats pnorm median
 #' @importFrom parallel mclapply
 #' @importFrom MASS fitdistr
+#' @importFrom matrixStats rowMins
 #'
 #' @noRd
 #'
@@ -223,6 +224,7 @@ test_split <- function(data,ids1,ids2,var.genes,num_PCs,batch,
 #' @importFrom dendextend cutree get_leaves_attr
 #' @importFrom scry devianceFeatureSelection
 #' @importFrom data.tree Node
+#' @importFrom matrixStats rowMins
 #'
 #' @examples
 #' data(counts)
@@ -365,6 +367,7 @@ scSHC <- function(data,batch=NULL,alpha=0.05,num_features=2500,
 #' @importFrom stats aggregate as.dendrogram
 #' @importFrom scry devianceFeatureSelection
 #' @importFrom dendextend get_branches_heights
+#' @importFrom matrixStats rowMins
 #'
 #' @examples
 #' data(counts)
