@@ -1,4 +1,10 @@
-# Fit model for one batch
+#' Fit model for one batch
+#'
+#' @importFrom Matrix t colMeans rowMeans
+#' @importFrom RSpectra eigs_sym
+#' @importFrom sfsmisc posdefify
+#'
+#' @noRd
 fit_model_batch <- function(y,on_genes,num_PCs) {
   # Compute sample moments of the on genes
   on_counts <- Matrix::t(y[on_genes,])
@@ -32,7 +38,10 @@ fit_model_batch <- function(y,on_genes,num_PCs) {
   return(list(Matrix::rowMeans(y),mus,on_cov.sqrt))
 }
 
-# Fit model
+#' Fit model
+#'
+#' @noRd
+#'
 fit_model <- function(y,on_genes,x,num_PCs) {
   on_means <- list()
   on_cov.sqrt <- list()
@@ -48,7 +57,12 @@ fit_model <- function(y,on_genes,x,num_PCs) {
   return(list(lambdas,on_means,on_cov.sqrt))
 }
 
-# Generate one null sample
+#' Generate one null sample
+#'
+#' @importFrom stats rpois rnorm
+#'
+#' @noRd
+#'
 generate_null <- function(y,params,on_genes,x) {
   lambdas <- params[[1]]
   on_means <- params[[2]]
@@ -75,7 +89,14 @@ generate_null <- function(y,params,on_genes,x) {
   return(list(null[,colSums(null)>0],x[colSums(null)>0]))
 }
 
-# Generate one null sample and compute test statistic
+#' Generate one null sample and compute test statistic
+#'
+#' @importFrom fastcluster hclust
+#' @importFrom stats dist
+#' @importFrom BiocNeighbors queryKNN AnnoyParam
+#'
+#' @noRd
+#'
 generate_null_statistic <- function(y,params,on_genes,x,num_PCs,
                                     gm,labs,posthoc) {
   null_set <- generate_null(y,params,on_genes,x)
@@ -114,7 +135,14 @@ generate_null_statistic <- function(y,params,on_genes,x,num_PCs,
   return(median(Qclust2))
 }
 
-# Test one split
+#' Test one split
+#'
+#' @importFrom stats pnorm median
+#' @importFrom parallel mclapply
+#' @importFrom MASS fitdistr
+#'
+#' @noRd
+#'
 test_split <- function(data,ids1,ids2,var.genes,num_PCs,batch,
                        alpha_level,cores,posthoc) {
   # Re-order data
@@ -167,7 +195,40 @@ test_split <- function(data,ids1,ids2,var.genes,num_PCs,batch,
   return(1-pnorm(stat,mean=fit$estimate[1],sd=fit$estimate[2]))
 }
 
-# Full clustering pipeline with built-in hypothesis testing
+#' scSHC
+#'
+#' Significance of Hierarchical Clustering for Single-Cell Data
+#'
+#' @details
+#' Full clustering pipeline with built-in hypothesis testing.
+#' Performs hierarchical clustering on single-cell data, with significance
+#' analysis built into the algorithm.
+#'
+#' @param data raw counts `matrix` or `Matrix` in genes by cells format,
+#' with row names and column names
+#' @param batch character vector of batch labels, in the same order as the
+#' columns of `data`
+#' @param alpha family-wise error rate
+#' @param num_features number of top genes to include in analysis
+#' @param num_PCs number of PCs to use in analysis
+#' @param parallel whether or not parallelization should be used
+#' @param cores number of cores; ignored if `parallel = FALSE`
+#'
+#' @return A list containing the vector of final cluster labels, and a
+#' `data.tree` object of the adjusted p-values for every split considered
+#' in the hierarchical clustering tree.
+#'
+#' @export
+#'
+#' @importFrom dendextend cutree get_leaves_attr
+#' @importFrom scry devianceFeatureSelection
+#' @importFrom data.tree Node
+#'
+#' @examples
+#' data(counts)
+#' \dontrun{
+#'   clusters <- scSHC(counts)
+#' }
 scSHC <- function(data,batch=NULL,alpha=0.05,num_features=2500,
                   num_PCs=30,parallel=T,cores=2) {
   if (!parallel) {
@@ -273,7 +334,45 @@ scSHC <- function(data,batch=NULL,alpha=0.05,num_features=2500,
   return(list(cluster_labels,node0))
 }
 
-# Significance analysis of pre-computed clusters
+#' testClusters
+#'
+#' Significance Analysis for Pre-Computed Clusters
+#'
+#' @details
+#' Performs significance analysis on pre-computed clusters in single-cell data.
+#'
+#' @param data raw counts `matrix` or `Matrix` in genes by cells format,
+#' with row names and column names
+#' @param cluster_ids character vector of pre-computed cluster ids, in the same
+#' order as the columns of `data`
+#' @param batch character vector of batch labels, in the same order as the
+#' columns of `data`
+#' @param var.genes (optional) vector of gene names representing the subset of
+#' genes used for clustering
+#' @param alpha family-wise error rate
+#' @param num_features number of top genes to include in analysis; not used if
+#' `var.genes` is supplied
+#' @param num_PCs number of PCs to use in analysis
+#' @param parallel whether or not parallelization should be used
+#' @param cores number of cores; ignored if `parallel = FALSE`
+#'
+#' @return A list containing the vector of final cluster labels, and a
+#' `data.tree` object of the adjusted p-values for every split considered in
+#' the hierarchical clustering tree.
+#'
+#' @export
+#'
+#' @importFrom stats aggregate as.dendrogram
+#' @importFrom scry devianceFeatureSelection
+#' @importFrom dendextend get_branches_heights
+#'
+#' @examples
+#' data(counts)
+#' cluster_labels <- c(rep('cluster1',288),rep('cluster2',289),
+#'                     rep('cluster3',288),rep('cluster4',289))
+#' \dontrun{
+#'   final_labels <- testClusters(counts, cluster_labels)
+#' }
 testClusters <- function(data,cluster_ids,batch=NULL,var.genes=NULL,
                          alpha=0.05,num_features=2500,num_PCs=30,
                          parallel=T,cores=2) {
@@ -404,3 +503,14 @@ testClusters <- function(data,cluster_ids,batch=NULL,var.genes=NULL,
 }
 
 
+#' A sample count matrix
+#'
+#' @name counts
+#' @docType data
+NULL
+
+#' A(nother) sample count matrix, just stored in bzip2 compressed format
+#'
+#' @name counts_compressed
+#' @docType data
+NULL
