@@ -10,7 +10,7 @@ scSHC(
   alpha = 0.05,
   num_features = 2500,
   num_PCs = 30,
-  parallel = T,
+  parallel = TRUE,
   cores = 2
 )
 }
