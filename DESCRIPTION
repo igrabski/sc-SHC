@@ -12,13 +12,13 @@ Description: We introduce a model-based hypothesis testing approach for
     significance of any provided set of clusters.
 License: Artistic-2.0
 Encoding: UTF-8
-LazyData: true
 Depends: 
     R (>= 3.5.0)
 Imports: 
     scry, 
     MASS, 
     Matrix, 
+    stats,
     dendextend, 
     BiocNeighbors, 
     parallel, 
