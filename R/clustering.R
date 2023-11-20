@@ -511,9 +511,3 @@ testClusters <- function(data,cluster_ids,batch=NULL,var.genes=NULL,
 #' @name counts
 #' @docType data
 NULL
-
-#' A(nother) sample count matrix, just stored in bzip2 compressed format
-#'
-#' @name counts_compressed
-#' @docType data
-NULL
