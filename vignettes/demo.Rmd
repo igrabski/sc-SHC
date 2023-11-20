@@ -15,6 +15,12 @@ vignette: |
   %\VignetteEncoding{UTF-8}
 ---
 
+```{r setup, include=FALSE, eval = TRUE, echo = FALSE}
+knitr::opts_chunk$set(
+  eval = FALSE
+)
+```
+
 # Introduction
 
 We introduce a significance analysis approach to clustering single-cell RNA-sequencing (scRNA-seq) data. Our approach is implemented in two ways. First, we present a stand-alone clustering pipeline, called single-cell significance of hierarchical clustering (sc-SHC), that builds hypothesis testing into a hierarchical clustering framework. Second, we offer a way to apply significance analysis to any set of pre-computed clusters. 
