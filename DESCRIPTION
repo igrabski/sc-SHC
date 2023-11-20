@@ -13,7 +13,25 @@ Description: We introduce a model-based hypothesis testing approach for
 License: Artistic-2.0
 Encoding: UTF-8
 LazyData: true
-Imports: scry, irlba, MASS, Matrix, dendextend, BiocNeighbors, parallel, 
-    matrixStats, RSpectra, sfsmisc, fastcluster, data.tree
-VignetteBuilder: knitr
-Suggests: BiocStyle, knitr, rmarkdown
+Depends: 
+    R (>= 3.5.0)
+Imports: 
+    scry, 
+    MASS, 
+    Matrix, 
+    dendextend, 
+    BiocNeighbors, 
+    parallel, 
+    matrixStats, 
+    RSpectra, 
+    sfsmisc, 
+    fastcluster, 
+    data.tree
+Suggests: 
+    BiocStyle, 
+    knitr, 
+    rmarkdown
+VignetteBuilder: 
+    knitr
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.2.3
