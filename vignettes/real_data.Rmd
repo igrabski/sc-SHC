@@ -145,3 +145,9 @@ ggarrange(DimPlot(data.seurat,group.by='scSHC')+NoLegend(),
           DimPlot(data.seurat,group.by='Corrected_Louvain')+NoLegend(),
           nrow=1)
 ```
+
+# Session info {.unnumbered}
+
+```{r sessionInfo, echo=FALSE}
+sessionInfo()
+```
