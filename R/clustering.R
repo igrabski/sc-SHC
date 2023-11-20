@@ -110,7 +110,7 @@ generate_null_statistic <- function(y,params,on_genes,x,num_PCs,
   } else {
     null_gm <- reduce_dimension(null,batch_null,num_PCs)[[2]]
     pdev <- poisson_dev_batch(null,batch_null)
-    pdev <- t(scale(Matrix::t(pdev),scale=F))
+    pdev <- t(scale(Matrix::t(pdev),scale=FALSE))
     gm2 <- t(crossprod(gm[[1]]$vectors,pdev))
     knns <- queryKNN(gm[[2]], gm2,
                      k=15, BNPARAM=AnnoyParam())$index
@@ -165,7 +165,7 @@ test_split <- function(data,ids1,ids2,var.genes,num_PCs,batch,
   phi_stat <- poisson_dispersion_stats(true[var.genes,])
   check_means <- matrixStats::rowMins(sapply(unique(batch),function(b)
     Matrix::rowSums(true[var.genes,batch==b])))
-  on_genes <- which(pnorm(phi_stat,lower.tail=F)<0.05&check_means!=0)
+  on_genes <- which(pnorm(phi_stat,lower.tail=FALSE)<0.05&check_means!=0)
 
   # Fit model
   params <- fit_model(true[var.genes,],on_genes,batch,num_PCs)
@@ -232,7 +232,7 @@ test_split <- function(data,ids1,ids2,var.genes,num_PCs,batch,
 #'   clusters <- scSHC(counts)
 #' }
 scSHC <- function(data,batch=NULL,alpha=0.05,num_features=2500,
-                  num_PCs=30,parallel=T,cores=2) {
+                  num_PCs=30,parallel=TRUE,cores=2) {
   if (!parallel) {
     cores <- 1
   }
@@ -251,7 +251,7 @@ scSHC <- function(data,batch=NULL,alpha=0.05,num_features=2500,
 
   # Get variable features
   dev <- scry::devianceFeatureSelection(data)
-  var.genes <- rownames(data)[order(dev,decreasing=T)[1:num_features]]
+  var.genes <- rownames(data)[order(dev,decreasing=TRUE)[1:num_features]]
 
   # Dimension reduction and clustering
   gm.x <- reduce_dimension(data[var.genes,],batch,num_PCs)[[2]]
@@ -268,7 +268,7 @@ scSHC <- function(data,batch=NULL,alpha=0.05,num_features=2500,
 
   while (length(dends_to_test)>0) {
     # Identify the two-way split
-    cuts <- dendextend::cutree(dends_to_test[[1]],k=2,order_clusters_as_data=F)
+    cuts <- dendextend::cutree(dends_to_test[[1]],k=2,order_clusters_as_data=FALSE)
     leaves <- get_leaves_attr(dends_to_test[[1]],'label')
     ids1 <- leaves[cuts==1]
     ids2 <- leaves[cuts==2]
@@ -283,7 +283,7 @@ scSHC <- function(data,batch=NULL,alpha=0.05,num_features=2500,
     # Get p-value of the split
     if (length(to.keep)>0) {
       test <- test_split(data,ids1,ids2,var.genes,num_PCs,
-                         batch,alpha_level,cores,posthoc=F)
+                         batch,alpha_level,cores,posthoc=FALSE)
     } else {
       test <- 1
     }
@@ -378,10 +378,10 @@ scSHC <- function(data,batch=NULL,alpha=0.05,num_features=2500,
 #' }
 testClusters <- function(data,cluster_ids,batch=NULL,var.genes=NULL,
                          alpha=0.05,num_features=2500,num_PCs=30,
-                         parallel=T,cores=2) {
+                         parallel=TRUE,cores=2) {
   if (is.null(var.genes)) {
     dev <- scry::devianceFeatureSelection(data)
-    var.genes <- rownames(data)[order(dev,decreasing=T)[1:num_features]]
+    var.genes <- rownames(data)[order(dev,decreasing=TRUE)[1:num_features]]
   } else {
     var.genes <- intersect(var.genes,rownames(data))
   }
@@ -421,7 +421,7 @@ testClusters <- function(data,cluster_ids,batch=NULL,var.genes=NULL,
 
   while (length(dends_to_test)>0) {
     # Identify the two-way split
-    cuts <- dendextend::cutree(dends_to_test[[1]],k=2,order_clusters_as_data=F)
+    cuts <- dendextend::cutree(dends_to_test[[1]],k=2,order_clusters_as_data=FALSE)
     leaves <- get_leaves_attr(dends_to_test[[1]],'label')
     ids1 <- which(cluster_ids%in%leaves[cuts==1])
     ids2 <- which(cluster_ids%in%leaves[cuts==2])
@@ -436,7 +436,7 @@ testClusters <- function(data,cluster_ids,batch=NULL,var.genes=NULL,
     # Get p-value of the split
     if (length(to.keep)>0) {
       test <- test_split(data,ids1,ids2,var.genes,num_PCs,batch,
-                         alpha_level,cores,posthoc=T)
+                         alpha_level,cores,posthoc=TRUE)
     } else {
       test <- 1
     }

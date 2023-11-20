@@ -14,7 +14,7 @@ poisson_dev_batch <- function(y,x) {
 
     return(sqrt(d)*ifelse(y>mu,1,-1))
   } else {
-    y1 <- lapply(unique(x),function(i) y[,x==i,drop=F])
+    y1 <- lapply(unique(x),function(i) y[,x==i,drop=FALSE])
     n <- lapply(y1,Matrix::colSums)
     pis <- lapply(y1,function(data) Matrix::rowSums(data)/sum(data))
     mu <- lapply(1:length(y1),function(ind)
@@ -67,7 +67,7 @@ poisson_dispersion_stats <- function(y){
 #'
 reduce_dimension <- function(y,x,num_PCs) {
   pdev <- poisson_dev_batch(y,x)
-  pdev <- t(scale(Matrix::t(pdev),scale=F))
+  pdev <- t(scale(Matrix::t(pdev),scale=FALSE))
   PCs <- RSpectra::eigs_sym(as.matrix(tcrossprod(pdev)),k=num_PCs)
   projection <- t(crossprod(PCs$vectors,pdev))
 
