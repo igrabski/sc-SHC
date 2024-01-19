@@ -2,8 +2,13 @@ Package: scSHC
 Type: Package
 Title: Significance Analysis for Clustering Single-Cell RNA-seq Data
 Version: 0.1.0
-Author: Isabella N. Grabski
-Maintainer: Isabella N. Grabski <isabellagrabski@g.harvard.edu>
+Authors@R: 
+    c(
+        person(
+            given = "Isabella", middle = "N.", family = "Grabski", role = c("aut", "cre"), 
+            email = "isabellagrabski@g.harvard.edu", comment = c(ORCID = "0000-0002-0616-5469")
+        )
+    )
 Description: We introduce a model-based hypothesis testing approach for 
     evaluating single-cell RNA-sequencing (scRNA-seq) clusters. This approach is 
     implemented in two ways: (1) a stand-alone clustering pipeline with built-in 
