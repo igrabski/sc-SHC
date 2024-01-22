@@ -6,7 +6,7 @@ Authors@R:
     c(
         person(
             given = "Isabella", middle = "N.", family = "Grabski", role = c("aut", "cre"), 
-            email = "isabellagrabski@g.harvard.edu", comment = c(ORCID = "0000-0002-0616-5469")
+            email = "igrabski@nygenome.org", comment = c(ORCID = "0000-0002-0616-5469")
         )
     )
 Description: We introduce a model-based hypothesis testing approach for 
