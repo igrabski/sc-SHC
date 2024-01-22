@@ -15,6 +15,12 @@ vignette: |
   %\VignetteEncoding{UTF-8}
 ---
 
+```{r setup, include=FALSE, eval = TRUE, echo = FALSE}
+knitr::opts_chunk$set(
+  eval = FALSE
+)
+```
+
 # Introduction
 
 We introduce a significance analysis approach to clustering single-cell RNA-sequencing (scRNA-seq) data. Our approach is implemented in two ways. First, we present a stand-alone clustering pipeline, called single-cell significance of hierarchical clustering (sc-SHC), that builds hypothesis testing into a hierarchical clustering framework. Second, we offer a way to apply significance analysis to any set of pre-computed clusters. 
@@ -32,12 +38,14 @@ library(scSHC)
 
 data(counts)
 true_labels <- c(rep('Cluster1',577),rep('Cluster2',577))
+
+nr_cores <- 8
 ```
 
 Next, we apply our clustering pipeline to these data. We keep the family-wise error rate (alpha) set to 0.05, which is the default setting. Note that this is a fairly conservative setting, and when the risk of false discoveries is more tolerable (for example, in exploratory analysis, when the goal is to detect possibly rare populations), this parameter can be increased. With the default number of 2 cores, this takes about 1 minute to run.
 
 ```{r,echo=TRUE,warning=FALSE,message=FALSE}
-clusters <- scSHC(counts)
+clusters <- scSHC(counts, cores = nr_cores)
 table(clusters[[1]],true_labels)
 ```
 
@@ -71,7 +79,7 @@ table(Idents(data.seurat),true_labels)
 At a resolution parameter of 0.8, Seurat found 7 clusters, where 3 clusters subdivide the first population and 4 clusters subdivide the second population. We now apply our significance analysis approach on top of these clusters, again using the default FWER of 0.05. This also takes about 1 minute with two cores.
 
 ```{r,echo=TRUE,warning=FALSE,message=FALSE}
-new_seurat <- testClusters(counts,cluster_ids=as.character(Idents(data.seurat)))
+new_seurat <- testClusters(counts,cluster_ids=as.character(Idents(data.seurat)), cores = nr_cores)
 table(new_seurat[[1]],Idents(data.seurat))
 ```
 
@@ -104,12 +112,12 @@ ggarrange(DimPlot(data.seurat,group.by='scSHC')+NoLegend(),
 In many settings, we may have batch effects due to multiple samples or other factors. These can be input into `scSHC()` or `testClusters()` as a character vector in the same order as the cells in the data. As an example, let's randomly generate batch labels, and then permute the top 30 genes for the cells in Batch 1.
 
 ```{r,echo=TRUE,warning=FALSE,message=FALSE}
-batch <- sample(c('batch1','batch2'),ncol(counts),replace=T)
+batch <- sample(c('batch1','batch2'),ncol(counts),replace=TRUE)
 counts2 <- counts
-top30 <- rownames(counts2)[order(rowSums(counts2),decreasing=T)[1:30]]
+top30 <- rownames(counts2)[order(rowSums(counts2),decreasing=TRUE)[1:30]]
 counts2[top30,batch=='batch1'] <- counts2[sample(top30,30),batch=='batch1']
 
-clusters_batch <- scSHC(counts2,batch)
+clusters_batch <- scSHC(counts2,batch, cores = nr_cores)
 table(clusters_batch[[1]],true_labels)
 ```
 
@@ -134,7 +142,8 @@ This results in 7 clusters, in which the first population is subdivided into 4 c
 ```{r,echo=TRUE,warning=FALSE,message=FALSE}
 new_seurat_batch <- testClusters(counts2,
                                  cluster_ids=as.character(Idents(data.seurat2)),
-                                 batch=batch)
+                                 batch=batch,
+                                 cores = nr_cores)
 table(new_seurat_batch[[1]],Idents(data.seurat2))
 ```
 

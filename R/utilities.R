@@ -1,4 +1,9 @@
-# Compute Poisson deviances
+#' Compute Poisson deviances
+#'
+#' @importFrom Matrix colSums rowSums
+#'
+#' @noRd
+#'
 poisson_dev_batch <- function(y,x) {
   if (is.null(x)) {
     n <- Matrix::colSums(y)
@@ -9,7 +14,7 @@ poisson_dev_batch <- function(y,x) {
 
     return(sqrt(d)*ifelse(y>mu,1,-1))
   } else {
-    y1 <- lapply(unique(x),function(i) y[,x==i,drop=F])
+    y1 <- lapply(unique(x),function(i) y[,x==i,drop=FALSE])
     n <- lapply(y1,Matrix::colSums)
     pis <- lapply(y1,function(data) Matrix::rowSums(data)/sum(data))
     mu <- lapply(1:length(y1),function(ind)
@@ -32,7 +37,13 @@ poisson_dev_batch <- function(y,x) {
   }
 }
 
-# Compute Poisson dispersion statistics
+#' Compute Poisson dispersion statistics
+#'
+#' @importFrom matrixStats rowVars
+#' @importFrom Matrix colSums rowSums
+#'
+#' @noRd
+#'
 poisson_dispersion_stats <- function(y){
   n <- Matrix::colSums(y)
   pis <- Matrix::rowSums(y)/sum(y)
@@ -48,22 +59,33 @@ poisson_dispersion_stats <- function(y){
   return(sqrt(ncol(y))*(disp-1)/sqrt(matrixStats::rowVars(y2)))
 }
 
-# Perform dimension reduction
+#' Perform dimension reduction
+#'
+#' @importFrom Matrix t
+#'
+#' @noRd
+#'
 reduce_dimension <- function(y,x,num_PCs) {
   pdev <- poisson_dev_batch(y,x)
-  pdev <- t(scale(Matrix::t(pdev),scale=F))
+  pdev <- t(scale(Matrix::t(pdev),scale=FALSE))
   PCs <- RSpectra::eigs_sym(as.matrix(tcrossprod(pdev)),k=num_PCs)
   projection <- t(crossprod(PCs$vectors,pdev))
 
   return(list(PCs, projection))
 }
 
-# Compute expected sum of squares from dimension reduction scores
+#' Compute expected sum of squares from dimension reduction scores
+#'
+#' @noRd
+#'
 compute_ess <- function(redduc) {
   sum((rowSums(sweep(redduc,2,colMeans(redduc),'-')^2)))
 }
 
-# Compute test statistic
+#' Compute test statistic
+#'
+#' @noRd
+#'
 ward_linkage <- function(redduc,labels) {
   ess1 <- compute_ess(redduc[labels==1,])
   ess2 <- compute_ess(redduc[labels==2,])

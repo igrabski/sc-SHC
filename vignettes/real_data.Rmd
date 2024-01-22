@@ -15,6 +15,12 @@ vignette: |
   %\VignetteEncoding{UTF-8}
 ---
 
+```{r setup, include=FALSE, eval = TRUE, echo = FALSE}
+knitr::opts_chunk$set(
+  eval = FALSE
+)
+```
+
 # Introduction
 
 We introduce a significance analysis approach to clustering single-cell RNA-sequencing (scRNA-seq) data. Our approach is implemented in two ways. First, we present a stand-alone clustering pipeline, called single-cell significance of hierarchical clustering (sc-SHC), that builds hypothesis testing into a hierarchical clustering framework. Second, we offer a way to apply significance analysis to any set of pre-computed clusters. 
@@ -39,7 +45,9 @@ liver.cnts <- counts(liver)
 Next, we apply our clustering pipeline to these data. We keep the family-wise error rate (alpha) set to 0.05, which is the default setting. Note that this is a fairly conservative setting, and when the risk of false discoveries is more tolerable (for example, in exploratory analysis, when the goal is to detect possibly rare populations), this parameter can be increased. With the default number of 2 cores, this takes about 5.5 minutes to run on this 12,000-cell dataset. 
 
 ```{r,echo=TRUE,warning=FALSE,message=FALSE}
-clusters <- scSHC(liver.cnts)
+nr_cores <- 8
+
+clusters <- scSHC(liver.cnts, cores = nr_cores)
 table(clusters[[1]],liver$broad)
 ```
 
@@ -54,7 +62,7 @@ clusters[[2]]
 We now demonstrate our significance analysis approach applied on pre-computed clusters. These clusters can arise from any clustering algorithm, including when manual changes were made to the output. Here, we show results when applying our approach to the 25 clusters that had been originally found in these data, again using the default FWER of 0.05. This takes about 7.5 minutes with two cores.
 
 ```{r,echo=TRUE,warning=FALSE,message=FALSE}
-new <- testClusters(liver.cnts,cluster_ids=liver$Cluster)
+new <- testClusters(liver.cnts,cluster_ids=liver$Cluster, cores = nr_cores)
 table(new[[1]],liver$Cluster)
 table(new[[1]],liver$broad)
 ```
@@ -98,7 +106,7 @@ set.seed(41423)
 kot <- KotliarovPBMCData()
 kot.cnts <- counts(kot)
 
-clusters <- scSHC(kot.cnts,batch=kot$batch)
+clusters <- scSHC(kot.cnts,batch=kot$batch, cores = nr_cores)
 table(clusters[[1]],kot$batch)
 ```
 
@@ -120,7 +128,7 @@ data.seurat <- RunUMAP(data.seurat,dims=1:30)
 data.seurat <- FindNeighbors(data.seurat)
 data.seurat <- FindClusters(data.seurat)
 
-new <- testClusters(kot.cnts,batch=kot$batch,cluster_ids=Idents(data.seurat))
+new <- testClusters(kot.cnts,batch=kot$batch,cluster_ids=Idents(data.seurat), cores = nr_cores)
 table(new[[1]],Idents(data.seurat))
 new[[2]]
 ```
@@ -136,4 +144,10 @@ ggarrange(DimPlot(data.seurat,group.by='scSHC')+NoLegend(),
           DimPlot(data.seurat,group.by='Louvain')+NoLegend(),
           DimPlot(data.seurat,group.by='Corrected_Louvain')+NoLegend(),
           nrow=1)
+```
+
+# Session info {.unnumbered}
+
+```{r sessionInfo, echo=FALSE}
+sessionInfo()
 ```
