@@ -1,6 +1,6 @@
 # Significance Analysis for Clustering Single-Cell RNA-Sequencing Data
 
-Contact information: igrabski[at]nygenome[dot]org
+**Contact information**: igrabski[at]nygenome[dot]org
 
 We introduce a model-based hypothesis testing approach for evaluating single-cell RNA-sequencing (scRNA-seq) clusters. This approach is implemented in two ways: (1) a stand-alone clustering pipeline with built-in hypothesis testing to produce clusters corresponding to distinct cell populations and (2) a post-hoc method that can evaluate the statistical significance of any provided set of clusters. 
 
